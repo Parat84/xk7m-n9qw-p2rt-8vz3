@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FW News Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            min-height: 100vh;
+        }
+
+        .dashboard-header {
+            background: linear-gradient(135deg, #000000 0%, #CC3333 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .header-content {
+            text-align: center;
+        }
+
+        .dashboard-header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        /* Tab Navigation */
+        .tab-container {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            overflow-x: auto;
+        }
+
+        .tab-nav {
+            display: flex;
+            min-width: 800px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px 20px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+        }
+
+        .tab-button:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .tab-button.active {
+            color: #CC3333;
+            border-bottom-color: #CC3333;
+            background: white;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            padding: 20px;
+            min-height: 800px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .feed-container {
+            background: #fff;
+            border-radius: 8px;
+            min-height: 600px;
+            padding: 0;
+            overflow: visible;
+        }
+
+        /* Override RSS.app wall widget styles - give more freedom */
+        rssapp-wall {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-height: 600px !important;
+            overflow: visible !important;
+        }
+
+        /* Ensure RSS.app buttons and pagination are visible */
+        rssapp-wall * {
+            max-width: none !important;
+            overflow: visible !important;
+        }
+
+        rssapp-wall .rss-app-wall-container {
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
+        }
+
+        /* Make sure load more buttons are visible */
+        rssapp-wall button,
+        rssapp-wall .load-more,
+        rssapp-wall [class*="load"],
+        rssapp-wall [class*="more"],
+        rssapp-wall [class*="button"] {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative !important;
+            z-index: 10 !important;
+        }
+
+        /* Loading state */
+        .loading-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 60px;
+            color: #666;
+            font-style: italic;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #CC3333;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .dashboard-header {
+                padding: 20px;
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .dashboard-header h1 {
+                font-size: 2rem;
+            }
+
+            .tab-nav {
+                min-width: auto;
+                flex-wrap: wrap;
+            }
+
+            .tab-button {
+                flex: none;
+                min-width: 120px;
+                padding: 12px 15px;
+                font-size: 0.8rem;
+            }
+            
+            .tab-content {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .dashboard-header {
+                padding: 15px;
+            }
+            
+            .dashboard-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .tab-button {
+                min-width: 100px;
+                padding: 10px 12px;
+                font-size: 0.75rem;
+            }
+            
+            .tab-content {
+                padding: 15px;
+                min-height: 700px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <div class="header-content">
+                <h1>FW News Tracker</h1>
+                <p>Real-time feed updates</p>
+            </div>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <div class="tab-container">
+            <div class="tab-nav">
+                <button class="tab-button active" onclick="showTab('tab1')">Anglo American Platinum</button>
+                <button class="tab-button" onclick="showTab('tab2')">Remgro Limited</button>
+                <button class="tab-button" onclick="showTab('tab3')">Italtile</button>
+                <button class="tab-button" onclick="showTab('tab4')">Gold Fields Limited</button>
+                <button class="tab-button" onclick="showTab('tab5')">Life Healthcare Group</button>
+                <button class="tab-button" onclick="showTab('tab6')">Sanlam Limited</button>
+                <button class="tab-button" onclick="showTab('tab7')">Exxaro Resources</button>
+                <button class="tab-button" onclick="showTab('tab8')">MTN Group</button>
+            </div>
+        </div>
+
+        <!-- Tab Content -->
+        <div id="tab1" class="tab-content active">
+            <div class="feed-container">
+                <div class="loading-placeholder">
+                    Loading Anglo American Platinum news...
+                    <div class="spinner"></div>
+                </div>
+                <rssapp-wall id="ezY2LOVhd1rFfDwa"></rssapp-wall>
+            </div>
+        </div>
+
+        <div id="tab2" class="tab-content">
+            <div class="feed-container">
+                <div class="loading-placeholder">
+                    Loading Remgro Limited news...
+                    <div class="spinner"></div>
+                </div>
+                <rssapp-wall id="B5y1jUlPlufjtpAm"></rssapp-wall>
+            </div>
+        </div>
+
+        <div id="tab3" class="tab-content">
+            <div class="feed-container">
+                <div class="loading-placeholder">
+                    Loading Italtile news...
+                    <div class="spinner"></div>
+                </div>
+                <rssapp-wall id="yHTvZ7uDts0y5RLi"></rssapp-wall>
+            </div>
+        </div>
+
+        <div id="tab4" class="tab-content">
+            <div class="feed-container">
+                <div class="loading-placeholder">
+                    Loading Gold Fields Limited news...
+                    <div class="spinner"></div>
+                </div>
+                <rssapp-wall id="i66OSrnXWGI1PRxl"></rssapp-wall>
+            </div>
+        </div>
+
+        <div id="tab5" class="tab-content">
+            <div class="feed-container">
+                <div class="loading-placeholder">
+                    Loading Life Healthcare Group news...
+                    <div class="spinner"></div>
+                </div>
+                <rssapp-wall id="PxHP6MqNs6OfERLh"></rssapp-wall>
+            </div>
+        </div>
+
+        <div id="tab6" class="tab-content">
+            <div class="feed-container">
+                <div class="loading-placeholder">
+                    Loading Sanlam Limited news...
+                    <div class="spinner"></div>
+                </div>
+                <rssapp-wall id="HOnaE8v64MIh3I0T"></rssapp-wall>
+            </div>
+        </div>
+
+        <div id="tab7" class="tab-content">
+            <div class="feed-container">
+                <div class="loading-placeholder">
+                    Loading Exxaro Resources news...
+                    <div class="spinner"></div>
+                </div>
+                <rssapp-wall id="GOvgS2U3PE9Xwkko"></rssapp-wall>
+            </div>
+        </div>
+
+        <div id="tab8" class="tab-content">
+            <div class="feed-container">
+                <div class="loading-placeholder">
+                    Loading MTN Group news...
+                    <div class="spinner"></div>
+                </div>
+                <rssapp-wall id="eGhW0YyRX6iYUGhT"></rssapp-wall>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load RSS.app wall script once -->
+    <script src="https://widget.rss.app/v1/wall.js" type="text/javascript" async></script>
+    
+    <script>
+        // Tab functionality
+        function showTab(tabId) {
+            // Hide all tabs
+            const allTabs = document.querySelectorAll('.tab-content');
+            const allButtons = document.querySelectorAll('.tab-button');
+            
+            allTabs.forEach(tab => tab.classList.remove('active'));
+            allButtons.forEach(button => button.classList.remove('active'));
+            
+            // Show selected tab
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Initialize widget for the newly active tab
+            setTimeout(() => {
+                initializeTabWidget(tabId);
+            }, 500);
+        }
+
+        // Initialize widget for specific tab
+        function initializeTabWidget(tabId) {
+            const tab = document.getElementById(tabId);
+            const widget = tab.querySelector('rssapp-wall');
+            const loading = tab.querySelector('.loading-placeholder');
+            
+            if (widget) {
+                // Show loading initially
+                if (loading) {
+                    loading.style.display = 'flex';
+                }
+                
+                // Check if widget needs initialization
+                if (widget.children.length === 0) {
+                    console.log('Initializing widget for tab:', tabId);
+                    
+                    // Force widget refresh by recreating it
+                    const widgetId = widget.id;
+                    const newWidget = document.createElement('rssapp-wall');
+                    newWidget.id = widgetId;
+                    widget.parentNode.replaceChild(newWidget, widget);
+                    
+                    // Trigger RSS.app to reinitialize this specific widget
+                    if (window.rssapp && window.rssapp.init) {
+                        try {
+                            window.rssapp.init();
+                        } catch (e) {
+                            console.log('RSS app init error:', e);
+                        }
+                    }
+                }
+                
+                // Quick check for loaded content
+                const quickCheck = setInterval(() => {
+                    const currentWidget = tab.querySelector('rssapp-wall');
+                    const currentLoading = tab.querySelector('.loading-placeholder');
+                    
+                    if (currentWidget && currentLoading) {
+                        // Check for any content in the widget
+                        const hasContent = currentWidget.children.length > 0 || 
+                                         currentWidget.innerHTML.trim().length > 0 ||
+                                         currentWidget.querySelector('div, article, p, img');
+                        
+                        if (hasContent) {
+                            currentLoading.style.display = 'none';
+                            clearInterval(quickCheck);
+                            console.log('Content detected, hiding loading for:', tabId);
+                        }
+                    }
+                }, 500); // Check every 500ms
+                
+                // Fallback: hide loading after 5 seconds max
+                setTimeout(() => {
+                    clearInterval(quickCheck);
+                    if (loading && loading.style.display !== 'none') {
+                        loading.style.display = 'none';
+                        console.log('Timeout: hiding loading for:', tabId);
+                    }
+                }, 5000);
+            }
+        }
+
+        // Staggered widget loading - only load visible tab initially
+        function loadWidgetsSequentially() {
+            // Only initialize the first tab initially
+            initializeTabWidget('tab1');
+            
+            console.log('Initial widget loaded for Anglo American Platinum');
+        }
+
+        // Logo and loading handling
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // Start loading first tab
+            setTimeout(function() {
+                loadWidgetsSequentially();
+            }, 1000);
+            
+            // Global content check - hide loading banners when content appears
+            const globalCheck = setInterval(function() {
+                const allLoadingElements = document.querySelectorAll('.loading-placeholder');
+                
+                allLoadingElements.forEach(function(loading) {
+                    if (loading.style.display !== 'none') {
+                        const container = loading.closest('.tab-content');
+                        const widget = container.querySelector('rssapp-wall');
+                        
+                        if (widget) {
+                            const hasContent = widget.children.length > 0 || 
+                                             widget.innerHTML.trim().length > 50 ||
+                                             widget.querySelector('div, article, p, img, span');
+                            
+                            if (hasContent) {
+                                loading.style.display = 'none';
+                                console.log('Global check: Content found, hiding loading');
+                            }
+                        }
+                    }
+                });
+            }, 1000);
+            
+            // Stop global checking after 10 seconds
+            setTimeout(function() {
+                clearInterval(globalCheck);
+                // Force hide any remaining loading banners
+                const remainingLoading = document.querySelectorAll('.loading-placeholder');
+                remainingLoading.forEach(function(loading) {
+                    loading.style.display = 'none';
+                });
+                console.log('Forced hiding of all loading banners');
+            }, 10000);
+        });
+
+        // Manual refresh function
+        function refreshCurrentTab() {
+            const activeTab = document.querySelector('.tab-content.active');
+            const activeWidget = activeTab.querySelector('rssapp-wall');
+            const loading = activeTab.querySelector('.loading-placeholder');
+            
+            if (loading) {
+                loading.style.display = 'flex';
+                loading.innerHTML = 'Refreshing...<div class="spinner"></div>';
+            }
+            
+            // Reset widget
+            if (activeWidget) {
+                const widgetId = activeWidget.id;
+                activeWidget.innerHTML = '';
+                
+                setTimeout(() => {
+                    initializeTabWidget(activeTab.id);
+                }, 1000);
+            }
+        }
+
+        // Error handling
+        window.addEventListener('error', function(e) {
+            console.log('Script error:', e);
+        });
+
+        // Add refresh button functionality
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+                e.preventDefault();
+                refreshCurrentTab();
+            }
+        });
+    </script>
+</body>
+</html>
